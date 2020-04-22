@@ -233,6 +233,11 @@
       reducer2: ...
     }
   ```
++ useState、useReducer
+  useState和useReducer都是服务于函数组件，使函数组件拥有自己独立的state和reducer来保存和更新组件的私有状态
++ 中间件
+  + redux-thunk
+  + Redux-Saga  
   参考：  
   > 1.http://www.ruanyifeng.com/blog/2016/09/redux_tutorial_part_one_basic_usages.html (一，二，三篇)
   > 2.https://www.cnblogs.com/wy1935/p/7109701.html
