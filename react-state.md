@@ -1,0 +1,9 @@
+## state
++ 组件内部state
+  + 普通组件
+  + 函数组件
++ 全局state
+  + 创建全局state
+  + 子组件使用全局state
++ state修改
+  + reducer和action
