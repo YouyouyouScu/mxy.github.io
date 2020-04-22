@@ -212,3 +212,29 @@
       
 + state修改
   + reducer和action
+  **action**: action是将数据从应用传到store的有效负载，必须有一个type,如`{ type: 'ADD_TODO', text: 'Go to swimming pool' }`  
+    action为了方便使用和书写，可以定义其creator  
+    ```
+    function addTodo(text) {
+      return {
+        type: ADD_TODO,
+        text
+      };
+    }
+    ```
+  **reducer**: reducer是根据action.type识别state怎么被修改的处理函数，他是纯函数，定义：`type Reducer<S, A> = (state: S, action: A) => S; ` 
+  reducer有两个参数，state和action, 返回值为新的state  
+  CombineReducer的函数(详细解析看引用):
+  项目复杂以后，需要拆分reducer单独维护，CombineReducer负责将多个reducer合并成一个reducer  
+  最终，state 对象的结构会是这样的:  
+  ```
+    {
+      reducer1: ...
+      reducer2: ...
+    }
+  ```
+  参考：  
+  > 1.http://www.ruanyifeng.com/blog/2016/09/redux_tutorial_part_one_basic_usages.html (一，二，三篇)
+  > 2.https://www.cnblogs.com/wy1935/p/7109701.html
+  
+  
