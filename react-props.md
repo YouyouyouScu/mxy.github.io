@@ -1,5 +1,5 @@
 ## props
-+ 入参  
++ 赋值   
 给组件传递props，直接在使用组件时，用key=value的形式赋值，例子:  
 ` const element = <HelloMessage name="myName"/>; `
 + 取值   
