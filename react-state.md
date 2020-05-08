@@ -238,8 +238,180 @@
 + 中间件
   + redux-thunk
   + Redux-Saga  
+  Saga中文文档：https://redux-saga-in-chinese.js.org/
+  Saga用于拦截异步action, 并且用同步的写法去书写异步处理操作（结合Generator），可读性更加高。  
+  本例中使用上文的react context来传递状态  
+  场景说明：
+  异步修改页面中的count元素
+  
+    1. 我们得有api去修改count, 代码如下：  
+    ```
+    // api.js
+
+    function getUserCount() {
+      // 使用promise和settimeout去模拟一个异步请求
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          resolve(2000);
+        }, 1000)
+      })
+    }
+
+    export { getUserCount }
+    ```
+    2. 我们需要定义修改state的action, 代码如下：  
+    ```
+    // actions.js
+
+    import { createAction } from 'redux-actions'
+    // 我们有两个action_type，但是只用createAction创建了一个，因为START_CHANGE_COUNT是saga的action, 不会对数据造成实际的操作，可以只定义类型
+    const ACTION_TYPE = {
+      START_CHANGE_COUNT: 'startChangeCount',
+      CHANGE_COUNT: 'changeCount',
+    }
+    
+    const changeCount = createAction(ACTION_TYPE.CHANGE_COUNT);
+
+    const actionsCreator = {
+      changeCount
+    }
+
+    export { ACTION_TYPE, actionsCreator }
+    ```
+    3. 创建reducer, 代码如下：  
+    ```
+    import { ACTION_TYPE } from "./actions.js";
+
+    const initState = {
+      count: 0,
+      name: 'zhangsan'
+    }
+
+    export const reducer = (state = initState, {type, payload}) => {
+      switch (type) {
+        // 这边我们并没有处理START_CHANGE_COUNT这个类型，而是默认return state，因为saga的action可以理解为中间桥梁，不改变数据
+        // 只有当异步操作结束以后，才会调用内部的action去修改数据
+        case ACTION_TYPE.CHANGE_COUNT: {
+          return {
+            ...state,
+            count: payload,
+          }
+        }
+        default:
+          return state;
+      }
+    }
+
+    export { ACTION_TYPE }
+    ```
+    前三步，我们都是和saga没有任何关系，只是按照常规定义api, action和reducer.  
+    4. 这一步，我们开始编写saga的监听和拦截逻辑，代码如下：  
+    ```
+    // sagaEffects.js
+
+    import { ACTION_TYPE, actionsCreator } from "./actions.js";
+    import { getUserCount } from "./api.js";
+    // api的使用可以去官网查看，这边不赘述
+    import { all, call, put, takeEvery } from 'redux-saga/effects'
+    
+    //在这个函数中，我们调用异步接口去获取Count, put函数会帮我们去调用redux的dispatch函数，真正的修改state的数据
+    function* fecthCount() {
+      const count = yield call(getUserCount);
+      yield put(actionsCreator.changeCount(count));
+    }
+    // 这个函数，监听saga的action: START_CHANGE_COUNT, 如果用户触发START_CHANGE_COUNT, 就执行fecthCount函数
+    function* watcherCount() {
+      yield takeEvery(ACTION_TYPE.START_CHANGE_COUNT, fecthCount);
+    }
+    // 这个函数只是用all把我们的监听函数封装一下，如果有多个saga action，除了用all, 也可以直接写多个 takeEvery
+    export function* mySaga() {
+      yield all([watcherCount()]);
+      // 直接使用下面写法也是可以的
+      // yield takeEvery(ACTION_TYPE.START_CHANGE_COUNT, fecthCount);
+    }
+    ```
+    4. 上面我们已经生成了saga的action逻辑，那么就在组件中触发saga的action, 代码如下：
+    ```
+    // App.js
+    import React, { useContext } from 'react';
+    import AppContext from "./AppContext";
+    import { ACTION_TYPE } from "../saga";
+
+    export default function App() {
+      const [state, dispatch] = useContext(AppContext);
+
+      return (
+        <div>
+          {state.name} ===========
+          {state.count}
+          <button type='primary' onClick={() => dispatch({ type: ACTION_TYPE.START_CHANGE_COUNT})}> change State </button>
+        </div>
+      );
+    }
+    
+    // AppContext.js
+    import React from "react";
+    // Page content, how to use:https://reactjs.org/docs/hooks-reference.html#usecontext
+    const AppContext = React.createContext();
+    export default AppContext;
+    ```
+    5. 最后我们在入口文件中引入saga
+    ```
+    // index.js
+    // saga test
+    import React from 'react';
+    import ReactDOM from 'react-dom';
+    import App from "./sagatest/App.js";
+    // 引入applyMiddleware，用来将saga放入store的中间件中
+    import { createStore, applyMiddleware } from 'redux'
+    // 引入createSagaMiddleware， 用来创建全局saga实例
+    import createSagaMiddleware from 'redux-saga'
+    // 将自己写的reducer, mySaga引入
+    import { reducer, mySaga } from "./saga";
+    import AppContext from "./sagatest/AppContext.js";
+    // 创建saga实例
+    const sagaMiddleware = createSagaMiddleware()
+    // 创建store时，引入saga实例
+    const AppStore = createStore(
+      reducer,
+      applyMiddleware(sagaMiddleware)
+    );
+    // 开启全局监听saga的action
+    sagaMiddleware.run(mySaga)
+
+    const render = () => {
+      ReactDOM.render(
+        // 这一步，将AppStore作为上下文参数传给子组件，App使用useContext获取
+        <AppContext.Provider value={[AppStore.getState(), AppStore.dispatch]}>
+          <App />
+        </AppContext.Provider>,
+        document.getElementById('root')
+      );
+    };
+    //渲染
+    render();
+
+    AppStore.subscribe(render);
+    ```
+    代码主要目录结构如下:  
+    > saga  
+      >> actions.js  
+      >> api.js  
+      >> index.js  
+      >> reducer.js  
+      >> sagaEffects.js  
+    > sagatest  
+      >> App.js  
+      >> AppContext.js  
+    index.js  
+    saga > index.js 代码如下： 
+    ```
+    export * from './reducer'
+    export * from './sagaEffects'
+    ```
   参考：  
   > 1.http://www.ruanyifeng.com/blog/2016/09/redux_tutorial_part_one_basic_usages.html (一，二，三篇)
   > 2.https://www.cnblogs.com/wy1935/p/7109701.html
+  > 3.http://www.ruanyifeng.com/blog/2015/04/generator.html
   
   
